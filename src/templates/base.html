@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Like</title>
+    <style>
+        .like-button {
+            background-color: #008CBA;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        .like-count {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <button class="like-button" onclick="toggleLike()">Like</button>
+    <div class="like-count" id="likeCount">0</div>
+
+    <script>
+        async function toggleLike() {
+            const videoPk = "{{path}}"; // Замените на актуальный идентификатор видео
+            const response = await fetch(`http://127.0.0.1:8000/likevideo/${videoPk}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include', // Включить куки, если необходимо
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('likeCount').innerText = data.like_count;
+            } else {
+                console.error('Не удалось поставить лайк видео');
+            }
+        }
+
+        // Получение начального количества лайков при загрузке страницы
+        async function fetchLikeCount() {
+            const videoPk = "{{path}}"; // Замените на актуальный идентификатор видео
+            const response = await fetch(`http://127.0.0.1:8000/likecount/${videoPk}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include', // Включить куки, если необходимо
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('likeCount').innerText = data.like_count;
+            } else {
+                console.error('Не удалось получить количество лайков');
+            }
+        }
+
+        window.onload = fetchLikeCount;
+    </script>
+</body>
+</html>
