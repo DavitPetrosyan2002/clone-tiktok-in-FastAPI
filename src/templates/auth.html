@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block content %}
+{{ super() }}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            width: 300px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        input[type="text"], input[type="password"], input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .message {
+            margin: 10px 0;
+            color: red;
+        }
+
+        .register-link {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .register-link a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+
+    <div class="container">
+        <h2>Login</h2>
+        <input type="text" id="loginUsername" placeholder="Username" required> <!-- Correct 'id' -->
+        <input type="password" id="loginPassword" placeholder="Password" required> <!-- Correct 'id' -->
+        <button onclick="loginUser()">Login</button>
+        <div id="loginMessage" class="message"></div>
+        <div class="register-link">
+            <p>Don't have an account? <a href="/followers/register">Register here</a></p>
+        </div>
+    </div>
+
+<script>
+async function loginUser() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    const loginMessage = document.getElementById('loginMessage');
+
+    const loginData = new URLSearchParams();
+    loginData.append("grant_type", "password");  
+    loginData.append("username", username); 
+    loginData.append("password", password);  
+    loginData.append("scope", "");  
+    loginData.append("client_id", "");  
+    loginData.append("client_secret", "");  
+
+    try {
+        const response = await fetch('http://127.0.0.1:8000/auth/jwt/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: loginData.toString()  
+        });
+
+        if (response.ok) {
+            loginMessage.style.color = "green";
+            loginMessage.innerText = "Login successful!";
+            window.location.href = 'http://127.0.0.1:8000/followers/profile';
+        } else {
+            const error = await response.json();
+            loginMessage.innerText = error.detail || "Error occurred during login.";
+        }
+    } catch (error) {
+        loginMessage.innerText = "Failed to login. Try again later.";
+    }
+}
+</script>
+{% endblock %}

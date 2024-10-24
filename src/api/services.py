@@ -1,5 +1,6 @@
 import shutil
 from fastapi import UploadFile,BackgroundTasks,HTTPException,Depends,Request
+from fastapi.responses import JSONResponse
 from uuid import uuid4
 from pathlib import Path
 from .models import Video
@@ -13,21 +14,27 @@ from .schemas import UploadVideo
 
 
 
-async def save_video(user:int,file:UploadFile,title:str,description:str,
+
+
+
+async def save_video(request:Request,user:int,file:UploadFile,title:str,description:str,
     background_tasks:BackgroundTasks,
     session:AsyncSession=Depends(get_async_session)):
-    file_name=f"media/{user}_{uuid4()}.mp4"
-    if file.content_type=='video/mp4':
-        file_content = await file.read()
-        background_tasks.add_task(write_video,file_name,file_content)
-    else:
-        raise HTTPException(status_code=418,detail="it isnt mp4")    
-    info=UploadVideo(title=title,description=description)
-    stms=Insert(Video).values(user_id=user,**dict(info),file=file_name) 
-    await session.execute(stms)
-    await session.commit() 
-    return{"filename":file.filename,"info":info}
-
+    try:
+        file_name=f"media/{user}_{uuid4()}.mp4"
+        if file.content_type=='video/mp4':
+            file_content = await file.read()
+            background_tasks.add_task(write_video,file_name,file_content)
+        else:
+            raise HTTPException(status_code=418,detail="it isnt mp4")    
+        info=UploadVideo(title=title,description=description)
+        stms=Insert(Video).values(user_id=user,**dict(info),file=file_name) 
+        await session.execute(stms)
+        await session.commit() 
+        return JSONResponse({"status":201,"filename":file.filename})
+    except HTTPException as e:
+        return JSONResponse({"status":401,"error":e.detail})
+       
 def write_video(file_name:str,file_content: bytes):
     with open(file_name,"wb") as buffer:
         buffer.write(file_content)

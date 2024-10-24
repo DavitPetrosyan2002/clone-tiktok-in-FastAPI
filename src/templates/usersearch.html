@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% block content %}
+{{ super() }}
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            margin: 0;
+        }
+
+        .search-container {
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 400px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #searchInput {
+            padding: 12px 20px;
+            font-size: 18px;
+            width: 100%;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        #searchInput:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
+        }
+
+        .results-container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .user-block {
+            background-color: #fff;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s, transform 0.3s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-block:hover {
+            background-color: #f1f1f1;
+            transform: scale(1.02);
+        }
+
+        .user-block:active {
+            background-color: #e0e0e0;
+        }
+
+        .user-block img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-block .user-info {
+            flex: 1;
+        }
+
+        .user-block .user-info h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #007bff;
+        }
+
+        .user-block .user-info p {
+            margin: 0;
+            color: #555;
+        }
+
+        .user-block .subscribe-button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .user-block .subscribe-button:hover {
+            background-color: #0056b3;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #888;
+            font-size: 16px;
+            padding: 20px;
+        }
+
+        /* Добавление иконки для поля поиска */
+        .search-container::before {
+            content: '🔍';
+            font-size: 24px;
+            color: #007bff;
+        }
+
+        /* Кнопка для очистки текста в поле поиска */
+        .clear-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #007bff;
+            font-size: 24px;
+            transition: color 0.3s;
+        }
+
+        .clear-button:hover {
+            color: #0056b3;
+        }
+    </style>
+
+    <div class="search-container">
+        <button class="clear-button" onclick="searchInput.value = '';">&times;</button>
+        <input type="text" id="searchInput" placeholder="Введите имя пользователя..." />
+    </div>
+    <div id="resultsContainer" class="results-container">
+        <div id="noResults" class="no-results">Введите текст для поиска</div>
+    </div>
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const noResults = document.getElementById('noResults');
+
+        searchInput.addEventListener('input', (event) => {
+            const query = event.target.value.trim();
+            resultsContainer.innerHTML = '';
+            if (query) {
+                get_user(query);
+            } else {
+                noResults.textContent = 'Введите текст для поиска';
+            }
+        });
+
+        async function add_subscriber(button, username) {
+            try {
+                let response = await fetch(`http://127.0.0.1:8000/followers/`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ user: username })
+                });
+                let data = await response.json();
+                console.log(data);
+                if (data.success) {
+                    console.log(`Successfully subscribed to ${username}`);
+                    button.textContent = 'Отписаться';
+                    button.dataset.following = 'true';
+                } else {
+                    console.error('Ошибка при добавлении подписчика:', data.message);
+                }
+            } catch (error) {
+                console.error('Ошибка при выполнении запроса:', error);
+            }
+        }
+
+        async function remove_subscriber(button, username) {
+            try {
+                let response = await fetch(`http://127.0.0.1:8000/followers/delete/${username}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                let data = await response.json();
+                console.log(data);
+                if (data.success) {
+                    console.log(`Successfully unsubscribed from ${username}`);
+                    button.textContent = 'Подписаться';
+                    button.dataset.following = 'false';
+                } else {
+                    console.error('Ошибка при удалении подписчика:', data.message);
+                }
+            } catch (error) {
+                console.error('Ошибка при выполнении запроса:', error);
+            }
+        }
+
+        async function get_user(username) {
+            let response = await fetch(`http://127.0.0.1:8000/followers/search_user/${username}`);
+        
+            if (response.ok) {
+                let data = await response.json();
+                let users = data.users; 
+                console.log("users", users); 
+                if (users.length > 0) {
+                    users.forEach(user => {
+                        const userBlock = document.createElement('div');
+                        userBlock.className = 'user-block';
+                        userBlock.innerHTML = `
+                            <img src="{{ url_for('static', path='usernk2.png') }}" alt="User Image">
+                            <div class="user-info">
+                                <h3>${user.username}</h3>
+                            </div>
+                            <button class="subscribe-button" data-username="${user.username}" data-following="${user.follow}">${user.follow ? 'Отписаться' : 'Подписаться'}</button> 
+                        `;
+                        resultsContainer.appendChild(userBlock);
+                    });
+                } else {
+                    const noResultsBlock = document.createElement('div');
+                    noResultsBlock.className = 'no-results';
+                    noResultsBlock.textContent = 'Ничего не найдено';
+                    resultsContainer.appendChild(noResultsBlock);
+                }
+            } else {
+                console.error('Ошибка при получении данных пользователя:', response.statusText);
+            }
+        }
+
+        resultsContainer.addEventListener('click', async (event) => {
+            if (event.target.classList.contains('subscribe-button')) {
+                const button = event.target;
+                const username = button.dataset.username;
+                const following = button.dataset.following === 'true';
+
+                if (following) {
+                    await remove_subscriber(button, username);
+                } else {
+                    await add_subscriber(button, username);
+                }
+            }
+        });
+        window.addEventListener('popstate', function(event) {
+            var currentUrl = window.location.href;
+            window.location.href = currentUrl;
+        });
+</script>
+{% endblock %}

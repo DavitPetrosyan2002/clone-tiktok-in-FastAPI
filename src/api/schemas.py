@@ -29,4 +29,8 @@ class video(BaseModel):
     file:str
     create_at:datetime
     user_id:int
-    
+
+class video_comments(BaseModel):
+    text:str
+    video_id:int
+    user_id:int

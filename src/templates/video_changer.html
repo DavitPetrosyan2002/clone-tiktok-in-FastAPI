@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% block content %}
+{{ super() }}
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .video-wrapper-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .video-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            padding: 20px 0;
+        }
+
+        .video-wrapper {
+            position: relative;
+            background-color: #111;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+
+        video {
+            width: 100%;
+            height: 650px; /* Set a fixed height */
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-info span {
+            font-size: 16px;
+            color: white;
+        }
+
+        .actions {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .like-btn, .comment-btn {
+            font-size: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.2s;
+        }
+
+        .like-btn:hover, .comment-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .like-count {
+            color: white;
+            font-size: 18px;
+        }
+
+        .comment-section {
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            bottom: 60px;
+            right: 10px;
+            width: 300px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .comment-section.expanded {
+            max-height: 400px;
+            padding: 10px;
+        }
+
+        .comment-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            color: white;
+        }
+
+        .comment {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .comment img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+            object-fit: cover;
+        }
+
+        .comment-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .comment-text {
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            padding: 5px;
+            color: white;
+            max-width: 80%;
+        }
+
+        .comment-section input {
+            margin-top: 5px;
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            width: 100%;
+            background-color: #333;
+            color: white;
+        }
+
+        .comment-section input::placeholder {
+            color: #aaa;
+        }
+
+        #load-more-video {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #load-more-video:hover {
+            background-color: #555;
+        }
+    </style>
+
+
+<div class="video-wrapper-container">
+    <div class="video-container">
+        <!-- Video blocks will be dynamically added here -->
+    </div>
+    <button id="load-more-video">Загрузить больше</button>
+</div>
+
+<script>
+    var page=1;
+    async function get_video() {
+        try {
+            let response = await fetch(`http://127.0.0.1:8000/index?page=${page}`);
+    
+            if (response.ok) {
+                let data = await response.json();
+                data.result.forEach(item => {
+                    fetchLikeCount(item.video.id)
+                    let videoWrapper = document.createElement('div');
+                    videoWrapper.classList.add('video-wrapper');
+                    
+                    videoWrapper.innerHTML = `
+                        <video id="video${item.video.id}" controls>
+                            <source src="http://127.0.0.1:8000/video/${item.video.id}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="user-info">
+                            <img src="{{ url_for('static', path='usernk2.png') }}" alt="User ${item.user}">
+                            <span>${item.user}</span>
+                        </div>
+                        <div class="actions">
+                            <button class="like-btn" onclick="toggleLike('${item.video.id}')">❤️</button>
+                            <span class="like-count" id="like-count-video${item.video.id}">0</span>
+                            <button class="comment-btn" onclick="toggleComments('${item.video.id}')">💬</button>
+                            <div class="comment-section" id="comments-video${item.video.id}">
+                                <ul class="comments-list"></ul>
+                                <input type="text" placeholder="Add a comment..." class="comment-input" onkeypress="addComment(event, '${item.video.id}')">
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.querySelector('.video-container').appendChild(videoWrapper);
+                });
+                
+                page++;
+                if (!data.hasMore) {
+                    document.getElementById('load-more-video').style.display = 'none';
+                }
+            } else {
+                console.error('Server response was not ok:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error fetching videos:', error);
+        }
+    }
+    async function fetchLikeCount(videoId) {
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/likecount/${videoId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById(`like-count-video${videoId}`).textContent = data.like_count;
+            } else {
+                console.error('Не удалось получить количество лайков');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+    async function toggleLike(videoId) {
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/likevideo/${videoId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById(`like-count-video${videoId}`).textContent = data.like_count;
+            } else {
+                console.error('Не удалось поставить лайк видео');
+                let cont=document.getElementById("content")
+                cont.innerHTML="Не удалось поставить лайк видео"
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+
+    
+
+    function toggleComments(videoId) {
+        const commentSection = document.getElementById(`comments-video${videoId}`);
+        if (commentSection.classList.contains("expanded")) {
+            commentSection.classList.remove("expanded");
+            commentSection.style.display = "none";
+        } else {
+            document.querySelectorAll('.comment-section').forEach(section => {
+                if (section !== commentSection) {
+                    section.classList.remove('expanded');
+                    section.style.display = "none";
+                }
+            });
+            commentSection.classList.add("expanded");
+            commentSection.style.display = "flex";
+            fetchcomment(videoId)
+        }
+    }
+    async function fetchcomment(videoId){
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/comments?video_id=${videoId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const commentList = document.querySelector(`#comments-video${videoId} .comments-list`);
+                commentList.innerHTML = '';
+                data.result.forEach(item=>{
+                    let commentItem = document.createElement('li');
+                    commentItem.classList.add('comment');
+                    commentItem.innerHTML = `
+                    <img src="{{ url_for('static', path='usernk2.png') }}" alt="User">
+                    <div class="comment-content">
+                        <span class="comment-author">${item.user}</span>
+                        <span class="comment-text">${item.comm}</span>
+                    </div>
+                    `;
+            
+                commentList.appendChild(commentItem);
+                commentList.scrollTop = commentList.scrollHeight;
+                })
+            } else {
+                console.error('Не удалось получить Комментарии');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+    
+
+    async function addComment(event, videoId) {
+        if (event.key === 'Enter' && event.target.value.trim() !== '') {
+            let info={"text":event.target.value,
+                    "video_id":videoId,
+                    "user_id":"{{user_id}}"
+                }
+            let response=await fetch(`http://127.0.0.1:8000/add_comments`,{
+                method:"POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body:JSON.stringify(info)
+                }
+            )
+            const commentList = document.querySelector(`#comments-video${videoId} .comments-list`);
+            
+            let commentItem = document.createElement('li');
+            commentItem.classList.add('comment');
+            commentItem.innerHTML = `
+                <img src="{{ url_for('static', path='usernk2.png') }}" alt="User">
+                <div class="comment-content">
+                    <span class="comment-author">{{username}}</span>
+                    <span class="comment-text">${event.target.value}</span>
+                </div>
+            `;
+            
+            commentList.appendChild(commentItem);
+            
+            event.target.value = '';
+            
+            commentList.scrollTop = commentList.scrollHeight;
+        }
+    }
+
+    document.getElementById('load-more-video').addEventListener('click', function() {
+        get_video();
+    });
+
+    
+    get_video();
+</script>
+{% endblock %}

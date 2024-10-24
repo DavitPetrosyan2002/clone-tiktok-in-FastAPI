@@ -1,7 +1,9 @@
 from datetime import datetime
 from fastapi_users.db import SQLAlchemyBaseUserTable, SQLAlchemyUserDatabase
 from sqlalchemy import MetaData, Table, Column, Integer, String, TIMESTAMP, ForeignKey, JSON, Boolean
+from sqlalchemy.orm import relationship
 from database import Base,metadata
+
 
 
 role = Table(
@@ -24,4 +26,5 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     is_active: bool = Column(Boolean, default=True, nullable=False)
     is_superuser: bool = Column(Boolean, default=False, nullable=False)
     is_verified: bool = Column(Boolean, default=False, nullable=False)
+    videos = relationship("Video", back_populates="user")
 

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block content %}
+{{ super() }}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #333;
+        }
+
+        .error {
+            color: red;
+            margin-bottom: 20px;
+        }
+        .success{
+            color: rgb(85, 244, 11);
+            margin-bottom: 20px;
+        }    
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"],
+        textarea,
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 100px;
+            resize: none;
+        }
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+    </style>
+
+    <div class="container">
+        <h2>Загрузка видео</h2>
+        <div id="status"></div>
+        <form id="formupload" enctype="multipart/form-data">
+            <label for="name">Имя:</label>
+            <input type="text" id="name" name="title" required>
+
+            <label for="description">Описание:</label>
+            <textarea id="description" name="description" required></textarea>
+
+            <label for="video">Выберите видео для загрузки:</label>
+            <input type="file" id="video" name="file" accept="video/*" required>
+
+            <input type="submit" value="Загрузить видео">
+        </form>
+    </div>
+    <script>
+        document.getElementById('formupload').addEventListener('submit', async(event)=>{
+            event.preventDefault()
+            let status=document.getElementById('status')
+            let form=event.target
+            const form_data=new FormData(form)
+            console.log(form_data)
+            
+            let response=await fetch(`http://127.0.0.1:8000/upload_file`,{
+                method:"POST",
+                credentials: "include",
+                body:form_data
+                }
+            )
+            if(response.ok){
+                new_data= await response.json()
+                if(new_data.status==201){
+                    status.classList.add('success')
+                    status.innerText=`Video ${new_data.filename}  saved successfully`;
+                    console.log(new_data.filename)
+                }
+                else{
+                    status.classList.remove('success')
+                    status.classList.add('error')
+                    status.innerText=new_data.error
+                }
+            }
+            else{
+                console.error("error")
+            }
+            form.reset()
+
+        }
+        )
+    </script>
+{% endblock %}
